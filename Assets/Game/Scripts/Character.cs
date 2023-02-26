@@ -20,6 +20,17 @@ public class Character : MonoBehaviour
     private UnityEngine.AI.NavMeshAgent _navMeshAgent;
     private Transform TargetPlayer;
 
+    private float attackStartTime;
+    public float AttackSlideDuration = 0.4f;
+    public float AttackSildeSpeed = 0.06f;
+
+    public enum CharacterState
+    {
+        Normal, Attacking
+    }
+
+    public CharacterState CurrentState;
+
     private void Awake()
     {
         _cc = GetComponent<CharacterController>();
@@ -38,6 +49,11 @@ public class Character : MonoBehaviour
 
     private void CalculatePlayerMovement()
     {
+        if(_playerInput.MouseButtonDown && _cc.isGrounded)
+        {
+            SwitchStateTo(CharacterState.Attacking);
+            return;
+        }
         _movementVelocity.Set(_playerInput.HorizontalInput, 0f, _playerInput.VerticalInput);
         _movementVelocity.Normalize();
         _movementVelocity = Quaternion.Euler(0, -45f, 0) * _movementVelocity;
@@ -60,15 +76,36 @@ public class Character : MonoBehaviour
         {
             _navMeshAgent.SetDestination(transform.position);
             _animator.SetFloat("Speed", 0f);
+
+            SwitchStateTo(CharacterState.Attacking);
         }
     }
 
     private void FixedUpdate()
     {
-        if(IsPlayer)
-        CalculatePlayerMovement();
-        else
-        CalculateEnemyMovement();
+        switch (CurrentState)
+        {
+            case CharacterState.Normal:
+                if (IsPlayer)
+                    CalculatePlayerMovement();
+                else
+                    CalculateEnemyMovement();
+
+                break;
+            case CharacterState.Attacking:
+                if (IsPlayer)
+                {
+                    _movementVelocity = Vector3.zero;
+                    if(Time.time < attackStartTime + AttackSlideDuration)
+                    {
+                        float timePassed = Time.time - attackStartTime;
+                        float lerpTime = timePassed / AttackSlideDuration;
+                        _movementVelocity = Vector3.Lerp(transform.forward * AttackSildeSpeed, Vector3.zero, lerpTime);
+                    }
+                }
+            break;
+        }
+    
 
         if (IsPlayer)
         {
@@ -81,6 +118,47 @@ public class Character : MonoBehaviour
             _cc.Move(_movementVelocity);
         }
 
+    }
 
+    private void SwitchStateTo(CharacterState newState)
+    {
+       
+
+        if (IsPlayer)
+        {
+            _playerInput.MouseButtonDown = false;
+        }
+
+        switch (CurrentState)
+        {
+            case CharacterState.Normal: break;
+            case CharacterState.Attacking: break;
+        }
+        switch (newState)
+        {
+            case CharacterState.Normal: break;
+            case CharacterState.Attacking:
+
+                if (!IsPlayer)
+                {
+                    Quaternion newRotation = Quaternion.LookRotation(TargetPlayer.position - transform.position);
+                    transform.rotation = newRotation;
+                }
+
+                _animator.SetTrigger("Attack");
+                if (IsPlayer)
+                {
+                    attackStartTime = Time.time;
+                }
+                break;
+        }
+
+        CurrentState = newState;
+        Debug.Log("Switched to" +  CurrentState); 
+    }
+
+    public void AttackAnimationEnds()
+    {
+        SwitchStateTo(CharacterState.Normal);
     }
 }

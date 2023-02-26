@@ -7,6 +7,8 @@ public class PlayerVXFManager : MonoBehaviour
 {
     public VisualEffect footStep;
 
+    public ParticleSystem Blade01;
+
     public void Update_FootStep(bool state)
     {
         if (state)
@@ -14,5 +16,10 @@ public class PlayerVXFManager : MonoBehaviour
         else
             footStep.Stop();
 
+    }
+
+    public void PlayBlade01()
+    {
+        Blade01.Play();
     }
 }
