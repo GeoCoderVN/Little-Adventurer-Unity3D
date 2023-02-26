@@ -29,10 +29,16 @@ public class Character : MonoBehaviour
 
     public enum CharacterState
     {
-        Normal, Attacking
+        Normal, Attacking, Dead, BeingHit
     }
 
     public CharacterState CurrentState;
+
+    private MaterialPropertyBlock _materialPropertBlock;
+    private SkinnedMeshRenderer _skinnedMeshRenderer;
+
+
+
 
     private void Awake()
     {
@@ -40,6 +46,9 @@ public class Character : MonoBehaviour
         _animator = GetComponent<Animator>();
         _health = GetComponent<Health>();
         _damageCaster = GetComponentInChildren<DamageCaster>();
+        _skinnedMeshRenderer = GetComponentInChildren<SkinnedMeshRenderer>();
+        _materialPropertBlock = new MaterialPropertyBlock();
+        _skinnedMeshRenderer.GetPropertyBlock(_materialPropertBlock);
 
 
 
@@ -139,7 +148,12 @@ public class Character : MonoBehaviour
         switch (CurrentState)
         {
             case CharacterState.Normal: break;
-            case CharacterState.Attacking: break;
+            case CharacterState.Attacking:
+                if (_damageCaster != null)
+                    DisableDamageCaster();
+                break;
+            case CharacterState.Dead: break;
+            case CharacterState.BeingHit: break;
         }
         switch (newState)
         {
@@ -176,6 +190,13 @@ public class Character : MonoBehaviour
 
         }
 
+        if (!IsPlayer)
+        {
+            GetComponent<EnemyVFXManager>().PlayBeingHitVXF(attackerPos);
+        }
+
+        StartCoroutine(MaterialBlink());
+
     }
 
     public void EnableDamageCaster()
@@ -185,6 +206,16 @@ public class Character : MonoBehaviour
     public void DisableDamageCaster()
     {
         _damageCaster.DisableDamageCaster();
+    }
+
+    IEnumerator MaterialBlink()
+    {
+        _materialPropertBlock.SetFloat("_blink", 0.4f);
+        _skinnedMeshRenderer.SetPropertyBlock(_materialPropertBlock);
+        yield return new WaitForSeconds(0.2f);
+
+        _materialPropertBlock.SetFloat("_blink", 0);
+        _skinnedMeshRenderer.SetPropertyBlock(_materialPropertBlock);
     }
 
 }
